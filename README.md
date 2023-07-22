@@ -1,11 +1,11 @@
-# Эффективное программирование, ч. 2. Пример
+# Generators in the wild. 
 
-Это программа-пример для статьи о генераторах и эффектном программировании
+This is an example app designed to illustrate an article about programming with effects and generators.
 
-## Установка
-Для работы нужна среда [deno](https://deno.land/)
+## Setup
+To execute this code you need [deno](https://deno.land/)
 
-## Запуск
+## Launching
 ```
 deno run --allow-read --allow-net index.ts
 ```
