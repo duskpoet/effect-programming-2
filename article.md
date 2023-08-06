@@ -1,3 +1,4 @@
+# Effect Programming in JavaScript
 
 In the [previous article](https://duskpoet.github.io/about/blog/iterators-and-generators-1.html), I talked about iterators and generators in JavaScript but did not provide any practical examples. With this article, I aim to fill this gap and demonstrate the specific pattern using generators through a simple web application.
 
