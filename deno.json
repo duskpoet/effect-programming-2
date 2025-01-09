@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@std/datetime": "jsr:@std/datetime@^0.225.2"
+  }
+}

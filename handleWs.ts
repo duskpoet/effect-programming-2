@@ -1,5 +1,4 @@
-import { WebSocket } from "https://deno.land/std@0.74.0/ws/mod.ts";
-import { format } from "https://deno.land/std@0.74.0/datetime/mod.ts";
+import { format } from "jsr:@std/datetime";
 
 class Channel {
   private takers: Array<(payload: string) => void> = [];
@@ -25,12 +24,12 @@ class Channel {
     this.buffer.push(message);
     this.callTakers();
   }
-  async listen(sock: WebSocket) {
-    for await (const event of sock) {
-      if (typeof event === "string") {
-        this.put(event);
+  listen(sock: WebSocket) {
+    sock.addEventListener("message", (event) => {
+      if (typeof event.data === "string") {
+        this.put(event.data);
       }
-    }
+    });
   }
 }
 
@@ -59,10 +58,11 @@ export async function handleWs(sock: WebSocket) {
       break;
     }
   }
+  sock.close();
 }
 
-const say = (text: string) => ({ type: "say", text } as const);
-const listen = () => ({ type: "listen" } as const);
+const say = (text: string) => ({ type: "say", text }) as const;
+const listen = () => ({ type: "listen" }) as const;
 
 function* dialog() {
   yield say('Welcome to "Do what I say BOT"');

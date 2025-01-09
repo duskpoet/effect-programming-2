@@ -1,9 +1,4 @@
-import {
-  serve,
-  ServerRequest,
-} from "https://deno.land/std@0.74.0/http/server.ts";
-import * as path from "https://deno.land/std@0.74.0/path/mod.ts";
-import { acceptWebSocket } from "https://deno.land/std@0.74.0/ws/mod.ts";
+import * as path from "node:path";
 import { handleWs } from "./handleWs.ts";
 
 const staticMatch: Set<string> = new Set();
@@ -24,41 +19,36 @@ console.log("Static files: ", staticMatch);
 
 type MiddlewarePayload = {
   url: URL;
-  req: ServerRequest;
+  req: Request;
 };
 
-type MiddlewareFn = (options: MiddlewarePayload) => Promise<true | undefined>;
+type MiddlewareFn = (
+  options: MiddlewarePayload,
+) => Promise<Response | undefined>;
 
-const index: MiddlewareFn = async ({ url, req }: MiddlewarePayload) => {
+const index: MiddlewareFn = async ({ url }: MiddlewarePayload) => {
   if (url.pathname === "/") {
-    req.respond({
-      body: await Deno.readFile(path.resolve(Deno.cwd(), "static/index.html")),
-    });
-    return true;
+    return new Response(
+      await Deno.readFile(path.resolve(Deno.cwd(), "static/index.html")),
+    );
   }
 };
 
-const staticFiles: MiddlewareFn = async ({ url, req }) => {
+const staticFiles: MiddlewareFn = async ({ url }) => {
   // remove head slash
   const fname = url.pathname.slice(1);
   if (staticMatch.has(fname)) {
-    req.respond({
-      body: await Deno.readFile(path.resolve(Deno.cwd(), fname)),
-    });
-    return true;
+    return new Response(await Deno.readFile(path.resolve(Deno.cwd(), fname)));
   }
 };
 
 const wsMiddleware: MiddlewareFn = async ({ url, req }) => {
   if (url.pathname === "/connect") {
-    const sock = await acceptWebSocket({
-      conn: req.conn,
-      bufReader: req.r,
-      bufWriter: req.w,
-      headers: req.headers,
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    socket.addEventListener("open", () => {
+      handleWs(socket);
     });
-    handleWs(sock);
-    return true;
+    return response;
   }
 };
 
@@ -75,15 +65,10 @@ const combineProcessors =
 
 const processors = combineProcessors(index, staticFiles, wsMiddleware);
 
-const server = serve({ port: 3000 });
-
-console.log("Listening on 3000");
-
 const BASE = "http://localhost";
-for await (const req of server) {
+
+Deno.serve({ port: 3000 }, async (req) => {
   const url = new URL(req.url, BASE);
   const result = await processors({ url, req });
-  if (!result) {
-    req.respond({ status: 404 });
-  }
-}
+  return result || new Response("Not found", { status: 404 });
+});
