@@ -14,7 +14,7 @@ Since I've mentioned **Deno**, let me provide a brief overview of it. Deno is a 
 
 - Native TypeScript support: Deno supports TypeScript natively, meaning you don't have to manually transpile TypeScript into JavaScript; Deno's subsystem takes care of this for you.
 - Permission-based system: Deno's permissions are based on command-line flags, providing more control over what authority a script can have when running.
-- Full URLs instead of package names: In Deno, you specify full URLs instead of package names, allowing you to use different versions of packages within the same program.
+- Full URLs instead of package names: In Deno, you can specify full URLs instead of package names, allowing you to use different versions of packages within the same program.
 - Modern standard library: Deno comes with its own set of standard utilities that offer a more modern API compared to Node.js. For instance, all asynchronous operations return promises instead of relying on callbacks.
 
 ## The application
@@ -74,16 +74,10 @@ for (const i of concat([1, 2], [3, 4])) {
 ## The code
 Creating an HTTP server listening on a specific port is straightforward in Deno:
 ```typescript
-import { serve } from "https://deno.land/std@0.74.0/http/server.ts";
-
-const server = serve({ port: 8080 });
-console.log("Listening on 8080");
-
-for await (const req of server) {
-  req.respond({ status: 200, body: 'Hello, world!' });
-}
+Deno.serve({ port: 8080 }, async (req) => {
+    return new Response("Hello, world!");
+});
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/master/index.ts#L78)
 
 As you can see, the server resulting from the serve function call is an asynchronous iterator. Each invocation of the _next_ method returns a promise that resolves when an incoming connection is received.
 
@@ -92,10 +86,10 @@ Next, we need two things from our server: serving static files and handling WebS
 ```typescript
 type MiddlewarePayload = {
   url: URL;
-  req: ServerRequest;
+  req: Request;
 };
 
-type MiddlewareFn = (options: MiddlewarePayload) => Promise<true | undefined>;
+type MiddlewareFn = (options: MiddlewarePayload) => Promise<Response | undefined>;
 
 const combineProcessors = (...fns: MiddlewareFn[]) => async (options: MiddlewarePayload) => {
   for (const fn of fns) {
@@ -106,31 +100,24 @@ const combineProcessors = (...fns: MiddlewareFn[]) => async (options: Middleware
   }
 }
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/master/index.ts#L65)
+[Github](https://github.com/duskpoet/effect-programming-2/blob/master/index.ts#L20)
 
-Each handler passed into such a combiner should return a promise that resolves to true if it processed the request; otherwise, it resolves to _undefined_.
+Each handler passed into such a combiner should return a promise that resolves to `Response` if it processed the request; otherwise, it resolves to _undefined_.
 
 Ultimately, the request handling code will look like this:
 
 ```typescript
 const processors = combineProcessors(index, staticFiles, wsMiddleware);
 
-const server = serve({ port: 8080 });
-
-console.log("Listening on 8080");
-
-// The request's host is not important for our program,
-// but it's required for the URL constructor
 const BASE = "http://localhost";
-for await (const req of server) {
+
+Deno.serve({ port: 3000 }, async (req) => {
   const url = new URL(req.url, BASE);
   const result = await processors({ url, req });
-  if (!result) {
-    req.respond({ status: 404 });
-  }
-}
+  return result || new Response("Not found", { status: 404 });
+});
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/67e6cb76d5da7fb40f76f2b3867c3c666c68d327/index.ts#L79)
+[Github](https://github.com/duskpoet/effect-programming-2/blob/master/index.ts#L66)
 
 
 I won't explain the _index_ and _staticFiles_ functions here, as they handle serving static files and can be found on GitHub if you're interested. However, let's delve into the WebSocket connection handler in more detail.
@@ -183,15 +170,15 @@ class Channel {
   }
 
   async listen(sock: WebSocket) {
-    for await (const event of sock) {
-      if (typeof event === "string") {
-        this.put(event);
+    sock.addEventListener("message", (event) => {
+      if (typeof event.data === "string") {
+        this.put(event.data);
       }
-    }
+    });
   }
 }
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/67e6cb76d5da7fb40f76f2b3867c3c666c68d327/handleWs.ts#L4)
+[Github](https://github.com/duskpoet/effect-programming-2/blob/master/handleWs.ts#L3)
 
 Explanation of what is happening here:
 
@@ -261,7 +248,7 @@ export async function handleWs(sock: WebSocket) {
   }
 }
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/67e6cb76d5da7fb40f76f2b3867c3c666c68d327/handleWs.ts#L37)
+[Github](https://github.com/duskpoet/effect-programming-2/blob/master/handleWs.ts#L36)
 
 This function is called when a new WebSocket connection is established.
 
@@ -307,7 +294,7 @@ function* sumSubDialog() {
   yield say(`The result is: ${result}`);
 }
 ```
-[Github](https://github.com/duskpoet/effect-programming-2/blob/67e6cb76d5da7fb40f76f2b3867c3c666c68d327/handleWs.ts#L64)
+[Github](https://github.com/duskpoet/effect-programming-2/blob/master/handleWs.ts#L64)
 
 The dialogue is represented as a generator that yields different effects at each step. The _say_ effect is executed immediately, sending a message to the socket, and the generator's code continues without waiting for data from the external environment. The _listen_ effect suspends the generator's execution until a message is received, which is then immediately passed back to the generator.
 
