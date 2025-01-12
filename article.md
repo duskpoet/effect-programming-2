@@ -56,7 +56,7 @@ for await (const tick of timer()) {
 ```
 
 ### yield*
-In addition to the _yield_ operator used to return the current value of an iterator, there exists the _yield*_ operator. It takes an iterator as a parameter and sequentially returns all its values. Into a generator, it returns the output of the iterator (the first value for which _done_ is true, or in the case of a generator, the value passed to the _return_).
+In addition to the _yield_ operator used to return the current value of an iterator, there exists the _yield*_ operator. It takes an iterator as a parameter and sequentially returns all its values.
 
 ```typescript
 function* concat<T>(...iterables: Iterable<T>[]) {
