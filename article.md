@@ -79,8 +79,6 @@ Deno.serve({ port: 8080 }, async (req) => {
 });
 ```
 
-As you can see, the server resulting from the serve function call is an asynchronous iterator. Each invocation of the _next_ method returns a promise that resolves when an incoming connection is received.
-
 Next, we need two things from our server: serving static files and handling WebSocket connections. Let's create a simple helper that chains request handlers together, similar to middlewares in Express.
 
 ```typescript
@@ -191,7 +189,7 @@ Why did we need a channel in the first place? What's wrong with the subscription
 
 ## What about generators?
 
-Indeed, if you were expecting to see the practical application of generators earlier in the article, you might have been surprised. However, the time has come to explore the core concept.
+Indeed, if you had expected to see the practical application of generators earlier in the article, you might have been surprised. However, the time has come to explore the core concept.
 
 As a reminder of what we aim to achieve and what we already have: we receive messages from users via a WebSocket into a channel, and in response, we send messages from the bot back to the user via WebSocket.
 
@@ -225,7 +223,7 @@ export async function handleWs(sock: WebSocket) {
   const incoming = new Channel();
   incoming.listen(sock);
 
-  let current: string = "";
+  let current = "";
   const iter = dialog();
   while (true) {
     const { value: effect, done } = iter.next(current);
